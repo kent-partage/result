@@ -3,482 +3,465 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P.Bパルタージェ 試合結果トラッカー</title>
-    <!-- Tailwind CSS CDN -->
+    <title>P.Bパルタージェ 試合結果集計</title>
+    <!-- Tailwind CSS CDNを読み込み -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inter Font CDN -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* Interフォントをボディ全体に適用 */
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* カスタムモーダルの背景 */
-        .modal-overlay {
-            background-color: rgba(0, 0, 0, 0.5);
+        /* スクロールバーのスタイルをカスタマイズ（任意） */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
-        /* メッセージ表示アニメーション */
-        @keyframes bounce-in {
-            0% { transform: translate(-50%, -100px); opacity: 0; }
-            60% { transform: translate(-50%, 10px); opacity: 1; }
-            100% { transform: translate(-50%, 0); opacity: 1; }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
         }
-        .animate-bounce-in {
-            animation: bounce-in 0.5s ease-out forwards;
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
     </style>
 </head>
-<body class="bg-gray-100 p-4">
+<body class="bg-gray-100 p-4 sm:p-8 flex justify-center items-start min-h-screen">
+    <!-- アプリケーションのメインコンテナ -->
+    <div class="container bg-white rounded-lg shadow-xl p-6 sm:p-10 w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-blue-700 mb-2">P.Bパルタージェ 試合結果・得点者集計</h1>
+            <p class="text-gray-600 text-lg">日々の試合結果と得点者を記録し、統計を確認できます。</p>
+        </header>
 
-    <div id="root">
-        <!-- React App will be mounted here -->
+        <main>
+            <!-- 試合結果入力セクション -->
+            <section id="input-section" class="mb-10 p-6 border border-gray-200 rounded-lg bg-blue-50">
+                <h2 class="text-2xl font-bold text-blue-600 mb-5">試合結果入力</h2>
+                <form id="match-input-form" class="space-y-4">
+                    <div>
+                        <label for="match-date" class="block text-gray-700 text-sm font-semibold mb-1">試合日:</label>
+                        <input type="date" id="match-date" class="form-input w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+                    </div>
+
+                    <div>
+                        <label for="opponent-team" class="block text-gray-700 text-sm font-semibold mb-1">対戦チーム名:</label>
+                        <input type="text" id="opponent-team" placeholder="例: vs〇〇高校" class="form-input w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+                    </div>
+
+                    <div>
+                        <label for="match-result" class="block text-gray-700 text-sm font-semibold mb-1">試合結果:</label>
+                        <select id="match-result" class="form-select w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+                            <option value="">選択してください</option>
+                            <option value="win">P.Bパルタージェの勝ち</option>
+                            <option value="lose">P.Bパルタージェの負け</option>
+                            <option value="draw">引き分け</option>
+                        </select>
+                    </div>
+
+                    <div id="scorer-input-area" class="space-y-3 p-4 border border-blue-200 rounded-md bg-blue-100">
+                        <label class="block text-gray-700 text-sm font-semibold mb-2">得点者 (複数選択可):</label>
+                        <!-- 初期得点者選択プルダウン要素 -->
+                        <div class="scorer-entry flex items-center space-x-2">
+                            <select class="scorer-select form-select flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400">
+                                <option value="">選択してください</option>
+                                <!-- JavaScriptで選手名が挿入されます -->
+                            </select>
+                            <!-- 最初のプルダウンには削除ボタンは表示しない (hiddenクラス) -->
+                            <button type="button" class="remove-scorer-button text-red-600 hover:text-red-800 text-lg font-bold p-1 rounded-full focus:outline-none hidden">×</button>
+                        </div>
+                        <button type="button" id="add-scorer-button" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                            得点者を追加
+                        </button>
+                    </div>
+
+                    <button type="submit" class="w-full bg-green-600 text-white p-3 rounded-md font-semibold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                        試合結果を登録
+                    </button>
+                </form>
+            </section>
+
+            <!-- 試合結果一覧セクション -->
+            <section id="results-section" class="mb-10 p-6 border border-gray-200 rounded-lg bg-gray-50">
+                <h2 class="text-2xl font-bold text-gray-700 mb-5">試合結果一覧</h2>
+                <div class="filter-controls mb-4 flex items-center space-x-3">
+                    <label for="year-filter" class="text-gray-700 text-sm font-semibold">表示年度:</label>
+                    <select id="year-filter" class="form-select p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <!-- JavaScriptで年度が挿入されます -->
+                    </select>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="match-results-table" class="min-w-full bg-white border border-gray-300 rounded-lg shadow-sm">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="py-3 px-4 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 rounded-tl-lg">試合日</th>
+                                <th class="py-3 px-4 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">対戦チーム</th>
+                                <th class="py-3 px-4 border-b border-gray-300 text-left text-sm font-semibold text-gray-700">結果</th>
+                                <th class="py-3 px-4 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 rounded-tr-lg">得点者</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <!-- 試合結果はJavaScriptで動的に挿入されます -->
+                            <tr><td colspan="4" class="text-center py-4 text-gray-500">試合結果がありません。</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 統計情報セクション -->
+            <section id="stats-section" class="p-6 border border-gray-200 rounded-lg bg-purple-50">
+                <h2 class="text-2xl font-bold text-purple-600 mb-5">統計情報</h2>
+
+                <h3 class="text-xl font-semibold text-purple-700 mb-3">対戦チームとの勝率</h3>
+                <div id="win-rate-display" class="space-y-3 mb-8">
+                    <!-- 各対戦チームとの勝率がJavaScriptで動的に表示されます -->
+                    <p class="text-gray-500">データがありません。</p>
+                </div>
+
+                <h3 class="text-xl font-semibold text-purple-700 mb-3">得点者ランキング</h3>
+                <div class="overflow-x-auto">
+                    <table id="scorer-rankings-table" class="min-w-full bg-white border border-gray-300 rounded-lg shadow-sm">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="py-3 px-4 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 rounded-tl-lg">選手名</th>
+                                <th class="py-3 px-4 border-b border-gray-300 text-left text-sm font-semibold text-gray-700 rounded-tr-lg">総得点数</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <!-- 得点者ランキングがJavaScriptで動的に挿入されます -->
+                            <tr><td colspan="2" class="text-center py-4 text-gray-500">得点データがありません。</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <footer class="text-center mt-10 text-gray-500 text-sm">
+            <p>&copy; 2025 P.Bパルタージェ アプリ. 無断転載を禁じます。</p>
+        </footer>
     </div>
 
-    <!-- React CDN -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM要素の参照を取得
+            const matchInputForm = document.getElementById('match-input-form');
+            const matchDateInput = document.getElementById('match-date');
+            const opponentTeamInput = document.getElementById('opponent-team');
+            const matchResultSelect = document.getElementById('match-result');
+            const scorerInputArea = document.getElementById('scorer-input-area');
+            const addScorerButton = document.getElementById('add-scorer-button');
+            const matchResultsTableBody = document.querySelector('#match-results-table tbody');
+            const yearFilterSelect = document.getElementById('year-filter');
+            const winRateDisplay = document.getElementById('win-rate-display');
+            const scorerRankingsTableBody = document.querySelector('#scorer-rankings-table tbody');
 
-    <!-- App Logic -->
-    <script type="module">
-        const { useState, useEffect, useCallback } = React;
-        const { createRoot } = ReactDOM;
+            // アプリケーションデータ
+            let matches = []; // 試合結果の配列を初期化
+            // 初期選手リスト
+            // このリストは現在コードにハードコードされています。
+            // アプリ内で動的に選手を追加する機能は含まれていません。
+            let players = ['山田太郎', '田中花子', '佐藤健', '鈴木一郎', '高橋優子', '中島美咲', '小林大輔', '山本彩'];
 
-        // プレーヤーの初期リスト
-        const initialPlayers = [
-            'トシキ', 'サワ', 'ヒロキ', 'ムラヤマ', 'トモ', 'ヒビキ', 'ショウタ', 'ケイジ', 'ケイヤ', 'ヤマグチ', 'クボ', 'タカヒト', 'ノム', 'アベ'
-        ];
-
-        function App() {
-            const [matches, setMatches] = useState([]);
-            const [opponent, setOpponent] = useState('');
-            const [pbScore, setPbScore] = useState('');
-            const [opponentScore, setOpponentScore] = useState('');
-            const [result, setResult] = useState(''); // 'win', 'lose', 'draw'
-            const [selectedScorers, setSelectedScorers] = useState([]);
-            const [players, setPlayers] = useState(initialPlayers); // アプリ内で管理するプレイヤーリスト
-            const [newPlayerName, setNewPlayerName] = useState('');
-            const [showPlayerModal, setShowPlayerModal] = useState(false); // 選手管理モーダルの表示状態
-            const [loading, setLoading] = useState(true); // localStorageからの読み込みを待つためのローディング状態
-            const [message, setMessage] = useState(''); // ユーザーへのメッセージ
-
-            // メッセージ表示関数
-            const showMessage = useCallback((text, duration = 3000) => {
-                setMessage(text);
-                const timer = setTimeout(() => {
-                    setMessage('');
-                }, duration);
-                return () => clearTimeout(timer); // クリーンアップ関数を返す
-            }, []);
-
-            // アプリ起動時にlocalStorageからデータを読み込む
-            useEffect(() => {
-                try {
-                    const storedMatches = localStorage.getItem('pb_palterge_matches');
-                    if (storedMatches) {
-                        setMatches(JSON.parse(storedMatches));
-                    }
-                } catch (error) {
-                    console.error("ローカルストレージからのデータ読み込みエラー:", error);
-                    showMessage('データの読み込みに失敗しました。: ' + error.message);
-                } finally {
-                    setLoading(false); // 読み込み完了
-                }
-            }, []);
-
-            // matchesステートが変更されるたびにlocalStorageに保存する
-            useEffect(() => {
-                if (!loading) { // 初期ロードが完了した後にのみ保存を実行
-                    try {
-                        localStorage.setItem('pb_palterge_matches', JSON.stringify(matches));
-                    } catch (error) {
-                        console.error("ローカルストレージへのデータ保存エラー:", error);
-                        showMessage('データの保存に失敗しました: ' + error.message);
-                    }
-                }
-            }, [matches, loading, showMessage]);
-
-            // 試合結果の計算
-            const calculateResult = (pb, opp) => {
-                if (pb === '' || opp === '') return '';
-                const pbInt = parseInt(pb);
-                const oppInt = parseInt(opp);
-                if (pbInt > oppInt) return 'win';
-                if (pbInt < oppInt) return 'lose';
-                return 'draw';
+            // ユニークなIDを生成するヘルパー関数
+            const generateUniqueId = () => {
+                return '_' + Math.random().toString(36).substr(2, 9);
             };
 
-            // 試合結果の表示テキスト
-            const getResultText = (res) => {
-                if (res === 'win') return '勝ち';
-                if (res === 'lose') return '負け';
-                if (res === 'draw') return '引き分け';
-                return '';
+            // データをLocalStorageに保存する関数
+            const saveData = () => {
+                localStorage.setItem('pb_palterge_matches', JSON.stringify(matches));
             };
 
-            // 試合の追加
-            const addMatch = () => {
-                if (!opponent || pbScore === '' || opponentScore === '') {
-                    showMessage('対戦チーム名とスコアは必須です。');
+            // データをLocalStorageから読み込む関数
+            const loadData = () => {
+                const storedMatches = localStorage.getItem('pb_palterge_matches');
+                if (storedMatches) {
+                    matches = JSON.parse(storedMatches);
+                }
+            };
+
+            // 個別の選手選択プルダウンに選手オプションを投入するヘルパー関数
+            const populatePlayerDropdownsForSingleSelect = (selectElement) => {
+                selectElement.innerHTML = '<option value="">選択してください</option>'; // 既存のオプションをクリアし、デフォルトオプションを追加
+                players.forEach(player => {
+                    const option = document.createElement('option');
+                    option.value = player;
+                    option.textContent = player;
+                    selectElement.appendChild(option);
+                });
+            };
+
+            // 得点者選択プルダウンを追加する関数
+            const addScorerDropdown = (initialValue = '') => {
+                // 得点者入力のエントリーを保持するdivを作成
+                const scorerEntryDiv = document.createElement('div');
+                scorerEntryDiv.className = 'scorer-entry flex items-center space-x-2';
+
+                // 新しいselect要素を作成
+                const newScorerSelect = document.createElement('select');
+                newScorerSelect.className = 'scorer-select form-select flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400';
+                populatePlayerDropdownsForSingleSelect(newScorerSelect); // 新しいプルダウンにも選手リストを投入
+                newScorerSelect.value = initialValue; // 初期値を設定
+
+                // 削除ボタンを作成
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.className = 'remove-scorer-button text-red-600 hover:text-red-800 text-lg font-bold p-1 rounded-full focus:outline-none';
+                removeButton.textContent = '×'; // 削除アイコン
+                // 削除ボタンがクリックされたときの処理
+                removeButton.onclick = (event) => {
+                    event.currentTarget.closest('.scorer-entry').remove(); // 親要素（scorer-entry div）ごと削除
+                    updateRemoveButtonsVisibility(); // 削除ボタンの表示を更新
+                };
+
+                // 新しいselect要素と削除ボタンをdivに追加
+                scorerEntryDiv.appendChild(newScorerSelect);
+                scorerEntryDiv.appendChild(removeButton);
+                // 「得点者を追加」ボタンの直前に新しい得点者エントリーを挿入
+                scorerInputArea.insertBefore(scorerEntryDiv, addScorerButton);
+
+                // 2つ目以降のプルダウンでは削除ボタンを表示するように更新
+                updateRemoveButtonsVisibility();
+            };
+
+            // 削除ボタンの表示/非表示を更新する関数
+            const updateRemoveButtonsVisibility = () => {
+                const scorerEntries = document.querySelectorAll('.scorer-entry');
+                scorerEntries.forEach(entry => {
+                    const removeButton = entry.querySelector('.remove-scorer-button');
+                    // エントリーが1つしかない場合は削除ボタンを非表示にする
+                    if (scorerEntries.length > 1) {
+                        removeButton.classList.remove('hidden');
+                    } else {
+                        removeButton.classList.add('hidden');
+                    }
+                });
+            };
+
+            // 試合結果リストをレンダリングする関数
+            const renderMatchList = () => {
+                matchResultsTableBody.innerHTML = ''; // テーブルの内容をクリア
+
+                const selectedYear = yearFilterSelect.value;
+                // 選択された年度で試合をフィルタリングし、日付の新しい順にソート
+                const filteredMatches = matches.filter(match => {
+                    if (selectedYear === 'all') { // 「すべての年度」が選択されている場合
+                        return true;
+                    }
+                    return new Date(match.date).getFullYear().toString() === selectedYear;
+                }).sort((a, b) => new Date(b.date) - new Date(a.date)); // 日付で降順ソート
+
+                // 試合結果がない場合のメッセージ表示
+                if (filteredMatches.length === 0) {
+                    const noDataRow = document.createElement('tr');
+                    noDataRow.innerHTML = `<td colspan="4" class="text-center py-4 text-gray-500">試合結果がありません。</td>`;
+                    matchResultsTableBody.appendChild(noDataRow);
                     return;
                 }
 
-                const calculatedResult = calculateResult(pbScore, opponentScore);
+                // 各試合結果を行としてテーブルに追加
+                filteredMatches.forEach(match => {
+                    const row = document.createElement('tr');
+                    let resultText = '';
+                    let resultColor = '';
+                    // 試合結果に応じたテキストと色を設定
+                    if (match.result === 'win') {
+                        resultText = '勝ち';
+                        resultColor = 'text-green-600 font-bold';
+                    } else if (match.result === 'lose') {
+                        resultText = '負け';
+                        resultColor = 'text-red-600 font-bold';
+                    } else {
+                        resultText = '引き分け';
+                        resultColor = 'text-gray-600 font-bold';
+                    }
+
+                    // 得点者がいない場合は「なし」と表示
+                    const scorersText = match.scorers.length > 0 ? match.scorers.join(', ') : 'なし';
+
+                    row.innerHTML = `
+                        <td class="py-2 px-4 border-b border-gray-200">${match.date}</td>
+                        <td class="py-2 px-4 border-b border-gray-200">${match.opponent}</td>
+                        <td class="py-2 px-4 border-b border-gray-200 ${resultColor}">${resultText}</td>
+                        <td class="py-2 px-4 border-b border-gray-200">${scorersText}</td>
+                    `;
+                    matchResultsTableBody.appendChild(row);
+                });
+            };
+
+            // 年度フィルターを更新する関数
+            const populateYearFilter = () => {
+                yearFilterSelect.innerHTML = '<option value="all">すべての年度</option>'; // デフォルトオプションを追加
+                const years = new Set();
+                matches.forEach(match => {
+                    years.add(new Date(match.date).getFullYear().toString()); // 試合からユニークな年を抽出
+                });
+                // 年を降順にソートしてフィルターに追加
+                Array.from(years).sort((a, b) => parseInt(b) - parseInt(a)).forEach(year => {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = `${year}年度`;
+                    yearFilterSelect.appendChild(option);
+                });
+                // 以前選択されていたフィルター値を復元、または最新の年に設定
+                const currentFilter = localStorage.getItem('pb_palterge_current_year_filter');
+                if (currentFilter && Array.from(years).includes(currentFilter)) {
+                     yearFilterSelect.value = currentFilter;
+                } else if (years.size > 0) {
+                    // データがある場合は最新の年にデフォルトで設定
+                    yearFilterSelect.value = Array.from(years).sort((a, b) => parseInt(b) - parseInt(a))[0];
+                } else {
+                    yearFilterSelect.value = 'all'; // データがない場合は「すべての年度」
+                }
+            };
+
+            // 統計情報をレンダリングする関数
+            const renderStats = () => {
+                // 勝率の計算と表示
+                const winRates = {};
+                matches.forEach(match => {
+                    if (!winRates[match.opponent]) {
+                        // 各対戦チームの統計情報を初期化
+                        winRates[match.opponent] = { win: 0, lose: 0, draw: 0, total: 0 };
+                    }
+                    winRates[match.opponent][match.result]++; // 結果に応じてカウントをインクリメント
+                    winRates[match.opponent].total++; // 総対戦数をインクリメント
+                });
+
+                winRateDisplay.innerHTML = ''; // 表示エリアをクリア
+                const opponentNames = Object.keys(winRates).sort(); // 対戦チーム名をアルファベット順にソート
+
+                // データがない場合のメッセージ
+                if (opponentNames.length === 0) {
+                    winRateDisplay.innerHTML = '<p class="text-gray-500">データがありません。</p>';
+                } else {
+                    // 各対戦チームの勝率を表示
+                    opponentNames.forEach(opponent => {
+                        const stats = winRates[opponent];
+                        // 勝率を計算（小数点以下1桁まで）
+                        const winPercentage = stats.total > 0 ? ((stats.win / stats.total) * 100).toFixed(1) : 0;
+                        const p = document.createElement('p');
+                        p.className = 'text-gray-800';
+                        p.innerHTML = `<strong>${opponent}:</strong> ${stats.total}戦 (${stats.win}勝, ${stats.lose}敗, ${stats.draw}分) - 勝率: <span class="font-bold text-blue-600">${winPercentage}%</span>`;
+                        winRateDisplay.appendChild(p);
+                    });
+                }
+
+                // 得点者ランキングの計算と表示
+                const scorerCounts = {};
+                matches.forEach(match => {
+                    match.scorers.forEach(scorer => {
+                        // 各選手の総得点数を集計
+                        scorerCounts[scorer] = (scorerCounts[scorer] || 0) + 1;
+                    });
+                });
+
+                scorerRankingsTableBody.innerHTML = ''; // テーブルの内容をクリア
+                // 得点の多い順に選手をソート
+                const sortedScorers = Object.entries(scorerCounts).sort(([, countA], [, countB]) => countB - countA);
+
+                // データがない場合のメッセージ
+                if (sortedScorers.length === 0) {
+                    const noDataRow = document.createElement('tr');
+                    noDataRow.innerHTML = `<td colspan="2" class="text-center py-4 text-gray-500">得点データがありません。</td>`;
+                    scorerRankingsTableBody.appendChild(noDataRow);
+                } else {
+                    // 各選手と総得点数をテーブルに追加
+                    sortedScorers.forEach(([scorer, count]) => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="py-2 px-4 border-b border-gray-200">${scorer}</td>
+                            <td class="py-2 px-4 border-b border-gray-200">${count}</td>
+                        `;
+                        scorerRankingsTableBody.appendChild(row);
+                    });
+                }
+            };
+
+            // アプリケーションの初期化関数
+            const initApp = () => {
+                loadData(); // データをLocalStorageからロード
+                // 初期ロード時に最初の得点者プルダウンに選手を投入
+                populatePlayerDropdownsForSingleSelect(document.querySelector('.scorer-select'));
+                updateRemoveButtonsVisibility(); // 初期状態の削除ボタン表示を調整
+                populateYearFilter(); // 年度フィルターを初期化
+                renderMatchList(); // 試合結果リストをレンダリング
+                renderStats(); // 統計情報をレンダリング
+            };
+
+            // イベントリスナーの設定
+
+            // 試合結果フォームの送信イベントリスナー
+            matchInputForm.addEventListener('submit', (event) => {
+                event.preventDefault(); // デフォルトのフォーム送信動作をキャンセル
+
+                const date = matchDateInput.value;
+                const opponent = opponentTeamInput.value.trim(); // 前後の空白を削除
+                const result = matchResultSelect.value;
+                // 選択された得点者をすべて取得し、空の値を除外
+                const selectedScorers = Array.from(document.querySelectorAll('.scorer-select'))
+                                            .map(select => select.value)
+                                            .filter(value => value !== '');
+
+                // 必須項目のバリデーション
+                if (!date || !opponent || !result) {
+                    // 本来はカスタムモーダルを使用すべきですが、今回はalertで簡易化
+                    alert('すべての必須項目を入力してください。');
+                    return;
+                }
+
+                // 新しい試合結果オブジェクトを作成
                 const newMatch = {
-                    id: Date.now().toString(), // ユニークなIDを生成 (ミリ秒単位のタイムスタンプ)
-                    date: new Date().toISOString().split('T')[0], // YYYY-MM-DD形式
-                    opponent,
-                    pbScore: parseInt(pbScore),
-                    opponentScore: parseInt(opponentScore),
-                    result: calculatedResult,
-                    scorers: selectedScorers,
-                    timestamp: new Date().getTime() // ソート用 (ミリ秒単位のタイムスタンプ)
+                    id: generateUniqueId(), // ユニークIDを付与
+                    date: date,
+                    opponent: opponent,
+                    result: result,
+                    scorers: selectedScorers
                 };
 
-                // 既存のmatchesの先頭に追加して、日付降順ソートの代わりにする
-                setMatches(prevMatches => [newMatch, ...prevMatches].sort((a, b) => b.timestamp - a.timestamp));
-                showMessage('試合結果を追加しました。');
+                matches.push(newMatch); // 新しい試合結果を配列に追加
+                saveData(); // データをLocalStorageに保存
+
+                // UIを更新
+                populateYearFilter();
+                renderMatchList();
+                renderStats();
 
                 // フォームをリセット
-                setOpponent('');
-                setPbScore('');
-                setOpponentScore('');
-                setResult('');
-                setSelectedScorers([]);
-            };
+                matchInputForm.reset();
+                // 得点者プルダウンを初期状態（1つのみ）に戻す
+                const initialScorerSelect = document.querySelector('.scorer-select');
+                scorerInputArea.innerHTML = ''; // 得点者入力エリアを一度クリア
+                // 最初の得点者エントリー（プルダウンと削除ボタン）を再追加
+                scorerInputArea.appendChild(initialScorerSelect.closest('.scorer-entry'));
+                populatePlayerDropdownsForSingleSelect(initialScorerSelect); // 最初のプルダウンに選手を再投入
+                initialScorerSelect.value = ''; // 選択をリセット
+                scorerInputArea.appendChild(addScorerButton); // 「追加」ボタンを再配置
+                updateRemoveButtonsVisibility(); // 削除ボタンの表示を調整
+                // 日付入力フィールドの初期値を今日の日付に設定
+                matchDateInput.valueAsDate = new Date();
+            });
 
-            // 試合の削除
-            const deleteMatch = (id) => {
-                showMessage('削除しています...');
-                setMatches(prevMatches => prevMatches.filter(match => match.id !== id));
-                showMessage('試合結果を削除しました。');
-            };
+            // 「得点者を追加」ボタンのクリックイベントリスナー
+            addScorerButton.addEventListener('click', () => {
+                addScorerDropdown();
+            });
 
-            // 対戦チームごとの勝率計算
-            const getWinRates = useCallback(() => {
-                const stats = {};
-                matches.forEach(match => {
-                    if (!stats[match.opponent]) {
-                        stats[match.opponent] = { total: 0, wins: 0, draws: 0, losses: 0 };
-                    }
-                    stats[match.opponent].total++;
-                    if (match.result === 'win') stats[match.opponent].wins++;
-                    else if (match.result === 'draw') stats[match.opponent].draws++;
-                    else if (match.result === 'lose') stats[match.opponent].losses++;
-                });
+            // 年度フィルターの変更イベントリスナー
+            yearFilterSelect.addEventListener('change', () => {
+                // 選択された年度をLocalStorageに保存し、次回ロード時に復元できるようにする
+                localStorage.setItem('pb_palterge_current_year_filter', yearFilterSelect.value);
+                renderMatchList(); // 試合結果リストを再レンダリング
+            });
 
-                const winRates = {};
-                for (const opponentName in stats) {
-                    const s = stats[opponentName];
-                    const winPercentage = s.total > 0 ? ((s.wins / s.total) * 100).toFixed(1) : 0;
-                    winRates[opponentName] = {
-                        ...s,
-                        winPercentage: `${winPercentage}%`
-                    };
-                }
-                return winRates;
-            }, [matches]);
-
-            // 得点者ごとの総得点数計算
-            const getTopScorers = useCallback(() => {
-                const scorerGoals = {};
-                matches.forEach(match => {
-                    if (match.scorers && Array.isArray(match.scorers)) {
-                        match.scorers.forEach(scorer => {
-                            scorerGoals[scorer] = (scorerGoals[scorer] || 0) + 1;
-                        });
-                    }
-                });
-
-                // オブジェクトを配列に変換し、得点が多い順にソート
-                return Object.entries(scorerGoals).sort(([, a], [, b]) => b - a);
-            }, [matches]);
-
-            // 選手追加モーダルを開く
-            const openPlayerModal = () => setShowPlayerModal(true);
-            // 選手追加モーダルを閉じる
-            const closePlayerModal = () => setShowPlayerModal(false);
-
-            // 新しい選手を追加
-            const addNewPlayer = () => {
-                if (newPlayerName && !players.includes(newPlayerName)) {
-                    setPlayers([...players, newPlayerName]);
-                    setNewPlayerName('');
-                    showMessage('選手を追加しました。');
-                } else if (players.includes(newPlayerName)) {
-                    showMessage('この選手はすでに存在します。');
-                }
-            };
-
-            // 選手を削除
-            const deletePlayer = (playerToDelete) => {
-                showMessage(`${playerToDelete}を選手リストから削除します...`);
-                setPlayers(players.filter(p => p !== playerToDelete));
-                showMessage('選手を削除しました。');
-            };
-
-            if (loading) {
-                return (
-                    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-                        <div className="text-xl font-semibold text-gray-700">ロード中...</div>
-                    </div>
-                );
-            }
-
-            return (
-                <div className="min-h-screen bg-gray-100 p-4 font-inter">
-                    {/* メッセージ表示エリア */}
-                    {message && (
-                        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-bounce-in">
-                            {message}
-                        </div>
-                    )}
-
-                    <h1 className="text-4xl font-bold text-center text-gray-800 mb-8 rounded-lg p-3 bg-white shadow-md">
-                        P.Bパルタージェ 試合結果トラッカー
-                    </h1>
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* 試合結果入力フォーム */}
-                        <div className="lg:col-span-1 bg-white p-6 rounded-lg shadow-md h-fit">
-                            <h2 className="text-2xl font-semibold text-gray-700 mb-4">試合結果入力</h2>
-                            <div className="mb-4">
-                                <label htmlFor="opponent" className="block text-gray-700 text-sm font-bold mb-2">対戦チーム名:</label>
-                                <input
-                                    type="text"
-                                    id="opponent"
-                                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                    value={opponent}
-                                    onChange={(e) => setOpponent(e.target.value)}
-                                    placeholder="例: 強豪FC"
-                                />
-                            </div>
-
-                            <div className="mb-4">
-                                <label className="block text-gray-700 text-sm font-bold mb-2">P.Bパルタージェ スコア:</label>
-                                <input
-                                    type="number"
-                                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                    value={pbScore}
-                                    onChange={(e) => {
-                                        setPbScore(e.target.value);
-                                        setResult(calculateResult(e.target.value, opponentScore));
-                                    }}
-                                    min="0"
-                                    placeholder="0"
-                                />
-                            </div>
-
-                            <div className="mb-4">
-                                <label className="block text-gray-700 text-sm font-bold mb-2">対戦チーム スコア:</label>
-                                <input
-                                    type="number"
-                                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                    value={opponentScore}
-                                    onChange={(e) => {
-                                        setOpponentScore(e.target.value);
-                                        setResult(calculateResult(pbScore, e.target.value));
-                                    }}
-                                    min="0"
-                                    placeholder="0"
-                                />
-                            </div>
-
-                            <div className="mb-4">
-                                <label className="block text-gray-700 text-sm font-bold mb-2">試合結果:</label>
-                                <span className={`text-lg font-bold ${result === 'win' ? 'text-green-600' : result === 'lose' ? 'text-red-600' : result === 'draw' ? 'text-blue-600' : 'text-gray-500'}`}>
-                                    {getResultText(result)}
-                                </span>
-                            </div>
-
-                            <div className="mb-6">
-                                <label className="block text-gray-700 text-sm font-bold mb-2">得点者:</label>
-                                <div className="flex flex-wrap gap-2 mb-2">
-                                    {selectedScorers.map((scorer, index) => (
-                                        <span key={index} className="flex items-center bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
-                                            {scorer}
-                                            <button
-                                                onClick={() => setSelectedScorers(selectedScorers.filter(s => s !== scorer))}
-                                                className="ml-1 text-blue-800 hover:text-blue-900 focus:outline-none"
-                                            >
-                                                &times;
-                                            </button>
-                                        </span>
-                                    ))}
-                                </div>
-                                <select
-                                    className="shadow border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400 mb-2"
-                                    onChange={(e) => {
-                                        const scorer = e.target.value;
-                                        if (scorer && !selectedScorers.includes(scorer)) {
-                                            setSelectedScorers([...selectedScorers, scorer]);
-                                        }
-                                    }}
-                                    value="" // 選択後にリセットするため空にする
-                                >
-                                    <option value="">得点者を選択...</option>
-                                    {players.map(player => (
-                                        <option key={player} value={player}>{player}</option>
-                                    ))}
-                                </select>
-                                <button
-                                    onClick={openPlayerModal}
-                                    className="mt-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition duration-200"
-                                >
-                                    選手管理
-                                </button>
-                            </div>
-
-                            <button
-                                onClick={addMatch}
-                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg w-full transition duration-300 transform hover:scale-105"
-                            >
-                                試合結果を記録
-                            </button>
-                        </div>
-
-                        {/* 統計情報 */}
-                        <div className="lg:col-span-1 bg-white p-6 rounded-lg shadow-md h-fit">
-                            <h2 className="text-2xl font-semibold text-gray-700 mb-4">統計情報</h2>
-
-                            <h3 className="text-xl font-medium text-gray-600 mb-3">対戦チームとの勝率</h3>
-                            {Object.keys(getWinRates()).length === 0 ? (
-                                <p className="text-gray-500">まだ試合が記録されていません。</p>
-                            ) : (
-                                <ul className="space-y-2">
-                                    {Object.entries(getWinRates()).map(([opponentName, stats]) => (
-                                        <li key={opponentName} className="bg-gray-50 p-3 rounded-lg shadow-sm">
-                                            <strong className="text-gray-800">{opponentName}:</strong>
-                                            <span className="ml-2 text-gray-700">
-                                                勝率 {stats.winPercentage} ({stats.wins}勝 / {stats.draws}分 / {stats.losses}敗, 全{stats.total}試合)
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-
-                            <h3 className="text-xl font-medium text-gray-600 mt-6 mb-3">得点者ランキング</h3>
-                            {getTopScorers().length === 0 ? (
-                                <p className="text-gray-500">まだ得点者が記録されていません。</p>
-                            ) : (
-                                <ul className="space-y-2">
-                                    {getTopScorers().map(([scorer, goals], index) => (
-                                        <li key={scorer} className="bg-gray-50 p-3 rounded-lg shadow-sm flex justify-between items-center">
-                                            <span className="text-gray-800 font-medium">
-                                                {index + 1}. {scorer}
-                                            </span>
-                                            <span className="text-blue-600 font-bold text-lg">{goals} ゴール</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-
-                        {/* 試合結果一覧 */}
-                        <div className="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
-                            <h2 className="text-2xl font-semibold text-gray-700 mb-4">試合結果一覧</h2>
-                            {matches.length === 0 ? (
-                                <p className="text-gray-500">まだ試合結果がありません。上記フォームから追加してください。</p>
-                            ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="min-w-full bg-white rounded-lg">
-                                        <thead className="bg-gray-200">
-                                            <tr>
-                                                <th className="py-2 px-4 text-left text-gray-600 font-bold text-sm rounded-tl-lg">日付</th>
-                                                <th className="py-2 px-4 text-left text-gray-600 font-bold text-sm">対戦チーム</th>
-                                                <th className="py-2 px-4 text-left text-gray-600 font-bold text-sm">結果</th>
-                                                <th className="py-2 px-4 text-left text-gray-600 font-bold text-sm">スコア</th>
-                                                <th className="py-2 px-4 text-left text-gray-600 font-bold text-sm">得点者</th>
-                                                <th className="py-2 px-4 text-left text-gray-600 font-bold text-sm rounded-tr-lg">アクション</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {matches.map(match => (
-                                                <tr key={match.id} className="border-b border-gray-200 hover:bg-gray-50">
-                                                    <td className="py-2 px-4 text-gray-800 text-sm">{match.date}</td>
-                                                    <td className="py-2 px-4 text-gray-800 text-sm">{match.opponent}</td>
-                                                    <td className={`py-2 px-4 text-sm font-medium ${match.result === 'win' ? 'text-green-600' : match.result === 'lose' ? 'text-red-600' : 'text-blue-600'}`}>
-                                                        {getResultText(match.result)}
-                                                    </td>
-                                                    <td className="py-2 px-4 text-gray-800 text-sm">{match.pbScore} - {match.opponentScore}</td>
-                                                    <td className="py-2 px-4 text-gray-800 text-sm">
-                                                        {match.scorers && match.scorers.length > 0 ? match.scorers.join(', ') : 'なし'}
-                                                    </td>
-                                                    <td className="py-2 px-4">
-                                                        <button
-                                                            onClick={() => deleteMatch(match.id)}
-                                                            className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-lg text-xs shadow-md transition duration-200"
-                                                        >
-                                                            削除
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* 選手管理モーダル */}
-                    {showPlayerModal && ReactDOM.createPortal( // Portalを使用してDOMの別の場所にレンダリング
-                        <div className="fixed inset-0 modal-overlay flex items-center justify-center z-50">
-                            <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-                                <h3 className="text-xl font-semibold text-gray-700 mb-4">選手管理</h3>
-                                <div className="mb-4">
-                                    <label htmlFor="new-player" className="block text-gray-700 text-sm font-bold mb-2">新しい選手名:</label>
-                                    <input
-                                        type="text"
-                                        id="new-player"
-                                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                        value={newPlayerName}
-                                        onChange={(e) => setNewPlayerName(e.target.value)}
-                                        placeholder="例: 佐藤"
-                                    />
-                                    <button
-                                        onClick={addNewPlayer}
-                                        className="mt-3 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-200 w-full"
-                                    >
-                                        選手を追加
-                                    </button>
-                                </div>
-                                <h4 className="text-lg font-medium text-gray-600 mb-2">現在の選手リスト:</h4>
-                                <ul className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-gray-50">
-                                    {players.length === 0 ? (
-                                        <li className="text-gray-500">選手がいません。</li>
-                                    ) : (
-                                        players.map(player => (
-                                            <li key={player} className="flex justify-between items-center py-1.5 border-b border-gray-100 last:border-b-0">
-                                                <span className="text-gray-800">{player}</span>
-                                                <button
-                                                    onClick={() => deletePlayer(player)}
-                                                    className="bg-red-400 hover:bg-red-600 text-white text-xs font-bold py-1 px-2 rounded-full transition duration-200"
-                                                >
-                                                    削除
-                                                </button>
-                                            </li>
-                                        ))
-                                    )}
-                                </ul>
-                                <div className="mt-6 flex justify-end">
-                                    <button
-                                        onClick={closePlayerModal}
-                                        className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition duration-200"
-                                    >
-                                        閉じる
-                                    </button>
-                                </div>
-                            </div>
-                        </div>,
-                        document.body // body直下にレンダリング
-                    )}
-                </div>
-            );
-        }
-
-        // Reactアプリをroot要素にマウント
-        const container = document.getElementById('root');
-        const root = createRoot(container);
-        root.render(React.createElement(App));
+            // アプリケーション起動時の処理
+            initApp();
+            // 日付入力フィールドの初期値を今日の日付に設定
+            matchDateInput.valueAsDate = new Date();
+        });
     </script>
 </body>
 </html>
